@@ -1,0 +1,46 @@
+CLOUD SYNC SETUP (Firebase, free)
+=================================
+
+PART 1 - Firebase (one time, on any phone or PC)
+1. Open  console.firebase.google.com  and sign in with a Google account.
+2. Create a project  -> name: shop-billing -> turn Google Analytics OFF -> Create.
+3. Left menu: Build -> Firestore Database -> Create database
+   -> location: asia-south1 (Mumbai) -> Start in PRODUCTION mode -> Create.
+4. Open the "Rules" tab. Delete everything, paste the text below, press Publish:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+
+5. Left menu: Build -> Authentication -> Get started
+   -> Email/Password -> turn Enable ON -> Save.
+6. Project settings (gear icon) -> Your apps -> Web icon  </>
+   -> nickname: billing -> Register app.
+7. Copy the whole  firebaseConfig = { ... }  block shown on the screen.
+   (Send it to yourself on WhatsApp so you can paste it on every phone.)
+
+PART 2 - The app
+8. Upload the new index.html and sw.js to your GitHub "Bill" repository
+   (Add file -> Upload files -> Commit changes). Wait 2 minutes.
+9. PHONE 1: open the app -> Settings -> Cloud sync -> paste the config
+   -> Save & connect -> type an email + password -> "Create shop account".
+   Products already on this phone are uploaded to the cloud automatically.
+10. PHONE 2: open the app -> Settings -> Cloud sync -> paste the SAME config
+    -> Save & connect -> same email + password -> "Sign in".
+11. In Settings -> "This phone's bill letter": use A on phone 1, B on phone 2.
+    Bills are then numbered A-1, A-2 ... and B-1, B-2 ... (no clashes).
+
+HOW IT WORKS
+- Bills, stock, products and shop details are shared on every signed-in phone.
+- No internet? Keep billing. Everything is saved on the phone and syncs by itself
+  when the internet comes back.
+- Stock is reduced by adding up each phone's sales, so two phones selling the
+  same product at the same time still give the right stock.
+- Open (unsaved) bills stay on the phone that started them.
+- Paper size is set separately on each phone (different printers).
+- Restore backup is only for single-phone mode.
