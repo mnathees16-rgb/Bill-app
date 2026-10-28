@@ -22,6 +22,9 @@ input.sp{font-size:20px;font-weight:700;border:2px solid var(--accent)}
 input,select{width:100%;color:var(--ink);font-size:16px;font-weight:600;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:0}
 input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 header{background:var(--accent);color:var(--accent-ink);padding:10px 14px 0;position:sticky;top:0;z-index:5}
+[hidden]{display:none!important}
+#pagebar{display:flex;align-items:center;gap:4px;padding:2px 0 10px;font-size:19px}
+#backbtn{background:none;border:0;color:inherit;font-size:26px;line-height:1;padding:4px 12px 4px 0;cursor:pointer}
 header .hrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.2px}
 #menubtn{background:none;border:0;color:inherit;font-size:26px;line-height:1;padding:6px 10px;margin-right:-8px;border-radius:10px;cursor:pointer}
@@ -117,6 +120,7 @@ h3{margin:18px 0 6px;font-size:15px}
     <button data-v="products">Products</button>
     <button data-v="history">Bills</button>
   </nav>
+  <div id="pagebar" hidden><button id="backbtn" aria-label="Back">←</button><b id="pagetitle"></b></div>
 </header>
 <main id="main"></main>
 
@@ -474,14 +478,12 @@ function productForm(p,code){
 
 /* ---------- saved bills ---------- */
 function vHistory(m){
-  if(hview==='sum'){vSummary(m);return}
-  m.innerHTML=histTop()+(S.bills.length?S.bills.map(b=>{const dt=new Date(b.date);
+  m.innerHTML=(S.bills.length?S.bills.map(b=>{const dt=new Date(b.date);
     return `<div class="card"><div class="top"><b>Bill #${b.no}</b><b>${cs()} ${money(b.grand)}</b></div>
     <div class="muted">${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · ${b.lines.length} item${b.lines.length>1?'s':''}</div>
     <div class="muted" style="margin-top:4px">${b.lines.map(l=>esc(l.name)+' ×'+l.qty).join(', ')}</div>
     <div class="row" style="margin-top:8px"><button class="btn sm" data-pr="${esc(b.id||b.no)}">Print again</button><button class="btn sm dng" data-vd="${esc(b.id||b.no)}">Void (restore stock)</button></div></div>`}).join(''):'<div class="empty">No saved bills yet.</div>');
   m.onclick=e=>{
-    if(histNav(e))return;
     const pr=e.target.closest('[data-pr]');if(pr){printBill(S.bills.find(b=>String(b.id||b.no)===pr.dataset.pr));return}
     const vd=e.target.closest('[data-vd]');
     if(vd&&confirm('Void this bill and put the items back in stock?')){
@@ -494,7 +496,7 @@ function vHistory(m){
 /* ---------- settings ---------- */
 function vSettings(m){
   const s=S.settings;
-  m.innerHTML=`<h2 style="margin:4px 0 4px;font-size:20px">Settings</h2><div class="card"><div class="fld">
+  m.innerHTML=`<div class="card"><div class="fld">
     <label class="full">Shop name<input data-k="shop" value="${esc(s.shop)}"></label>
     <label class="full">Mobile number<input data-k="mobile" inputmode="tel" value="${esc(s.mobile)}"></label>
     <label class="full">Address (optional)<input data-k="address" value="${esc(s.address)}"></label>
@@ -503,16 +505,18 @@ function vSettings(m){
     <label class="full">Low stock alert level (all products)<input data-k="low" type="number" inputmode="numeric" value="${esc(s.low!=null?s.low:5)}"></label>
     <label class="full">Bill footer message<input data-k="footer" value="${esc(s.footer)}"></label>
   </div></div>
-  ${cloudCard()}
-  <h3>Backup</h3>
-  <p class="muted" style="margin:0 0 8px">Your data is saved in this browser. Download a backup regularly.</p>
-  <div class="row" style="flex-wrap:wrap"><button class="btn" id="bk">Download backup</button><button class="btn" id="rs">Restore backup</button><input type="file" id="bf" accept=".json,application/json" hidden></div>
-  <p class="muted" style="margin-top:18px;font-size:12px">App version 7 · menu</p>`;
+  <p class="muted" style="margin-top:18px;font-size:12px">App version 8 · pages</p>`;
   $('[data-k=paper]',m).value=s.paper;
-  m.oninput=e=>{
-    if(e.target.id==='devp'){setDevPrefix(e.target.value.trim().toUpperCase()||'A');return}
-    const k=e.target.dataset.k;if(!k)return;s[k]=e.target.value;store.settingChanged(k);$('#shopname').textContent=s.shop||'Shop'};
+  m.oninput=e=>{const k=e.target.dataset.k;if(!k)return;s[k]=e.target.value;store.settingChanged(k);$('#shopname').textContent=s.shop||'Shop'};
+}
+function vCloud(m){
+  m.innerHTML=cloudCard()+'<p class="muted" style="font-size:13px;margin-top:12px">Same products, bills and stock on every phone. Works without internet and syncs when it is back.</p>';
+  m.oninput=e=>{if(e.target.id==='devp')setDevPrefix(e.target.value.trim().toUpperCase()||'A')};
   wireCloudCard(m);
+}
+function vBackup(m){
+  m.innerHTML=`<p class="muted" style="margin:0 0 10px">Your data is saved in this phone's browser. Download a backup regularly.</p>
+  <div class="row" style="flex-wrap:wrap"><button class="btn" id="bk">Download backup</button><button class="btn" id="rs">Restore backup</button><input type="file" id="bf" accept=".json,application/json" hidden></div>`;
   $('#bk').onclick=()=>download('billing-backup-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(S),'application/json');
   $('#rs').onclick=()=>$('#bf').click();
   $('#bf').onchange=async e=>{
@@ -678,7 +682,7 @@ async function cloudInit(){
       else{stopListeners();cloud.state='out'}
       setStatus();render();
     });
-  }catch(e){console.error(e);cloud.state='failed';setStatus();if(view==='settings')render()}
+  }catch(e){console.error(e);cloud.state='failed';setStatus();if(view==='cloud')render()}
 }
 function authMsg(e){
   const c=e&&e.code||'';
@@ -698,7 +702,7 @@ async function cloudAuth(mode,email,pass){
 }
 function cloudCard(){
   const st=cloud.state;
-  let h='<h3>Cloud sync (many phones)</h3><div class="card" id="cloudcard">';
+  let h='<div class="card" id="cloudcard">';
   if(st==='off')h+=`<p class="muted" style="margin:0 0 8px">Same products, bills and stock on every phone. Paste your Firebase config here (one time on each phone).</p>
     <textarea id="cfgtxt" rows="6" placeholder='const firebaseConfig = { apiKey: "...", projectId: "..." }' style="width:100%;font:13px monospace;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)"></textarea>
     <div class="acts" style="margin-top:8px"><button class="btn pri" id="cfgsave">Save &amp; connect</button></div>`;
@@ -737,7 +741,7 @@ function wireCloudCard(m){
 addEventListener('online',setStatus);addEventListener('offline',setStatus);
 
 /* ---------- sales summary: daily / monthly / yearly ---------- */
-let hview='list',rmode='day',rpick=null;
+let rmode='day',rpick=null;
 const pad2=n=>String(n).padStart(2,'0');
 const dayKey=d=>{d=new Date(d);return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())};
 function billTotals(b){
@@ -776,10 +780,6 @@ async function ensureDaily(){
   await rebuildDaily();
   await f.setDoc(f.doc(cloud.db,'users',cloud.user.uid,'meta','dailyv1'),{at:Date.now()});
 }
-function histTop(){
-  return `<div class="chips" style="margin-bottom:10px"><button class="chip ${hview==='list'?'on':''}" data-h="list">Bills</button><button class="chip ${hview==='sum'?'on':''}" data-h="sum">Summary</button></div>`;
-}
-function histNav(e){const h=e.target.closest('[data-h]');if(!h)return false;hview=h.dataset.h;render();return true}
 function sumOf(rows){const t={sales:0,bills:0,qty:0,saved:0,cost:0};rows.forEach(r=>{for(const k in t)t[k]=r2(t[k]+num(r[k]))});return t}
 function vSummary(m){
   const today=dayKey(new Date());
@@ -800,7 +800,7 @@ function vSummary(m){
     if(list.length)detail=rw('Bill','Items','Time','Total','h')+list.map(b=>rw('#'+esc(b.no),b.lines.length,new Date(b.date).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),money(b.grand))).join('');
   }
   const old=inCloud()&&Number(pick.slice(0,4))<new Date().getFullYear()-1;
-  m.innerHTML=histTop()+`<div class="chips"><button class="chip ${rmode==='day'?'on':''}" data-rm="day">Daily</button><button class="chip ${rmode==='month'?'on':''}" data-rm="month">Monthly</button><button class="chip ${rmode==='year'?'on':''}" data-rm="year">Yearly</button></div>
+  m.innerHTML=`<div class="chips"><button class="chip ${rmode==='day'?'on':''}" data-rm="day">Daily</button><button class="chip ${rmode==='month'?'on':''}" data-rm="month">Monthly</button><button class="chip ${rmode==='year'?'on':''}" data-rm="year">Yearly</button></div>
   <div style="margin-top:10px">${picker}</div>
   ${old?'<p class="muted" style="font-size:13px">Only this year and last year are shown here.</p>':''}
   ${T.bills?`<div class="sg">
@@ -813,7 +813,6 @@ function vSummary(m){
   </div>${detail}<p class="muted" style="font-size:12px;margin-top:12px">Profit = selling price minus cost price of the items sold.</p>`:'<div class="empty">No sales for this period.</div>'}
   ${inCloud()?'<div class="acts" style="margin-top:14px"><button class="btn sm" id="rb">Recalculate from bills</button></div>':''}`;
   m.onclick=async e=>{
-    if(histNav(e))return;
     const r=e.target.closest('[data-rm]');if(r){rmode=r.dataset.rm;rpick=null;render();return}
     if(e.target.id==='rb'){try{toast('Recalculating…');await rebuildDaily();toast('Summary updated')}catch(err){cloudErr(err)}}
   };
@@ -823,33 +822,38 @@ function vSummary(m){
 /* ---------- boot ---------- */
 function render(){
   $('#shopname').textContent=S.settings.shop||'Shop';
-  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===view&&!(view==='history'&&hview==='sum')));
-  $('#menubtn').classList.toggle('on',view==='settings'||(view==='history'&&hview==='sum'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));
+  const pg=PAGES[view];
+  document.querySelector('nav').hidden=!!pg;$('#pagebar').hidden=!pg;$('#pagetitle').textContent=pg||'';
+  $('#menubtn').classList.toggle('on',!!pg);
   const nb=lowList().length;$('nav [data-v=products]').innerHTML='Products'+(nb?`<i class="nb">${nb}</i>`:'');
   const m=$('#main');m.onclick=m.oninput=m.onchange=null;
-  ({bill:vBill,products:vProducts,history:vHistory,settings:vSettings})[view](m);
+  ({bill:vBill,products:vProducts,history:vHistory,summary:vSummary,settings:vSettings,cloud:vCloud,backup:vBackup})[view](m);
 }
-document.querySelector('nav').onclick=e=>{const b=e.target.closest('[data-v]');if(b){view=b.dataset.v;if(view==='history')hview='list';render();scrollTo(0,0)}};
-/* ☰ menu: Summary, Bills, Settings, Cloud sync, Backup */
+document.querySelector('nav').onclick=e=>{const b=e.target.closest('[data-v]');if(b){view=b.dataset.v;render();scrollTo(0,0)}};
+/* ☰ menu: Summary, Settings, Cloud sync, Backup - each opens as its own page with a back arrow */
+const PAGES={summary:'Summary',settings:'Settings',cloud:'Cloud sync',backup:'Backup'};
+let prevView='bill',pageOpen=false;
 function closeMenu(){const m=$('#menuwrap');if(m)m.remove()}
-function goMenu(k){
-  if(k==='sum'){view='history';hview='sum'}
-  else if(k==='bills'){view='history';hview='list'}
-  else view='settings';
+function openPage(k){
+  if(!PAGES[view])prevView=view;
+  view=k;
+  if(!pageOpen){try{history.pushState({pg:1},'')}catch(e){}pageOpen=true}
   render();scrollTo(0,0);
-  if(k==='cloud'||k==='backup')setTimeout(()=>{const t=$(k==='cloud'?'#cloudcard':'#bk');if(t)t.scrollIntoView({behavior:'smooth',block:'center'})},60);
 }
+function leavePage(){if(!PAGES[view])return;view=prevView||'bill';pageOpen=false;render();scrollTo(0,0)}
+$('#backbtn').onclick=()=>{if(history.state&&history.state.pg)history.back();else leavePage()};
+addEventListener('popstate',()=>{if(PAGES[view])leavePage()});
 $('#menubtn').onclick=()=>{
   if($('#menuwrap'))return closeMenu();
   const w=document.createElement('div');w.id='menuwrap';w.className='menuwrap';
   w.innerHTML=`<div class="menu">
-    <button data-go="sum">📊 Summary</button>
-    <button data-go="bills">🧾 Saved bills</button>
+    <button data-go="summary">📊 Summary</button>
     <button data-go="settings">⚙️ Settings</button>
     <hr>
     <button data-go="cloud">☁️ Cloud sync</button>
     <button data-go="backup">💾 Backup</button></div>`;
-  w.onclick=e=>{const b=e.target.closest('[data-go]');closeMenu();if(b)goMenu(b.dataset.go)};
+  w.onclick=e=>{const b=e.target.closest('[data-go]');closeMenu();if(b)openPage(b.dataset.go)};
   document.body.appendChild(w);
 };
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
