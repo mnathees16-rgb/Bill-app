@@ -1,4 +1,4 @@
-const C='shopbill-v13';
+const C='shopbill-v14';
 const F=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png'];
 const HOSTS=['www.gstatic.com','unpkg.com','cdn.jsdelivr.net'];   // Firebase + camera-scanner library files
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(F)));self.skipWaiting()});
